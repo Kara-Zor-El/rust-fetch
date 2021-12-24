@@ -1,0 +1,15 @@
+[package]
+name = "rust-fetch"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+hostname = "^0.3"
+whoami = "^1.2.1"
+titlecase = "^1.1.0"
+uname = "^0.1.1"
+walkdir = "^2.3.2"
+libmacchina = "^4.0.2"
+sys-info = "^0.9.1"
