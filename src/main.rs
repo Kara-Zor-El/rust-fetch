@@ -77,17 +77,18 @@ fn main() {
     let flatpak_e = std::path::Path::new("/bin/flatpak").exists() | std::path::Path::new("/usr/bin/flatpak").exists();
 
     // checks how many files cargo has
-    let cargo = fs::read_dir("/home/kara/.cargo/bin/").unwrap().count();
+    let cargo_dir: String = "/home/".to_owned() + &whoami::username() + "/.cargo/bin";
+    let cargo = fs::read_dir(cargo_dir).unwrap().count();
 
     // User Shell
     let usr_shell = env::var("SHELL").expect("$SHELL is not set");
 
     // Checks users desktop Env
     let mut de = env::var("XDG_CURRENT_DESKTOP")
-        .expect("$XDG_CURRENT_DESKTOP is not set") +
+        .expect("$XDG_CURRENT_DESKTOP is not set"); /* +
         " " +
         &env::var("DESKTOP_SESSION")
-        .expect("$DESKTOP_SESSION is not set");
+        .expect("$DESKTOP_SESSION is not set"); */
     de = titlecase(&de);
 
     // Checks current terminal
