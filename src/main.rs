@@ -1,9 +1,10 @@
 // crates
 /*
 use std::path::Path;
-*/ // unused crates
-use std::process::Command;
 use walkdir::WalkDir;
+*/ // unused crates
+use std::str;
+use std::process::Command;
 use std::fs::File;
 use std::fs;
 use std::io::Read;
@@ -16,7 +17,7 @@ use sys_info::mem_info;
 
 
 fn main() {
-    println!("rustFetch");
+    //println!("rustFetch");
 
     /* let mut host_name_file = File::open("/etc/hostname").unwrap();
     let mut host_name = String::new();
@@ -80,6 +81,30 @@ fn main() {
     let cargo_dir: String = "/home/".to_owned() + &whoami::username() + "/.cargo/bin";
     let cargo = fs::read_dir(cargo_dir).unwrap().count();
 
+    // Checks packages in all directories in $PATH
+    let mut path = env::var("PATH").expect("$PATH is not set");
+    let data = path.split(':');
+    let mut how_many = "".to_string();
+    let home_dir = "/home/".to_owned() + &whoami::username();
+    for s in data {
+        // println!("PATH: {}", s);
+        if s != "" && std::path::Path::new(s).exists() == true {
+            if fs::read_dir(s).unwrap().count().to_string().as_str() != "0" {
+                if s.contains(&home_dir) {
+                    how_many.push_str(s.replace(&home_dir, "~").to_string().as_str());
+                } else {
+                    how_many.push_str(s);
+                }
+                how_many.push_str(" (");
+                how_many.push_str(fs::read_dir(s).unwrap().count().to_string().as_str());
+                how_many.push_str("), ");
+                // println!("Packages: {:?}", how_many);
+            }
+        }
+    }
+    let how_many = &how_many[0..how_many.len() - 2];
+
+
     // User Shell
     let usr_shell = env::var("SHELL").expect("$SHELL is not set");
 
@@ -89,7 +114,7 @@ fn main() {
         " " +
         &env::var("DESKTOP_SESSION")
         .expect("$DESKTOP_SESSION is not set"); */
-    de = titlecase(&de);
+    //de = titlecase(&de);
 
     // Checks current terminal
     use libmacchina::traits::GeneralReadout as _;
@@ -98,6 +123,8 @@ fn main() {
     // Checks CPU name and cores
     let cpu_info = GeneralReadout::new().cpu_model_name().unwrap();
 
+    // Checks which GPUs you have
+    //gpu_find();
     // Checks memory info
     let mem = mem_info().unwrap();
       let mem_used = mem.total/1024 - mem.avail/1024;
@@ -118,28 +145,51 @@ fn main() {
         println!("Uptime: {} minutes", minutes);
     };
     // files exists?
-    println!(" - Pacman exists? {}", pac_e);
+    /* println!(" - Pacman exists? {}", pac_e);
     println!(" - APT exists? {}", apt_e);
     println!(" - PIP exists? {}", pip_e);
     println!(" - Cargo exists? {}", cargo_e);
     println!(" - Flatpak exists? {}", flatpak_e);
-    println!(" - Cargo ({})", cargo);
+    println!(" - Cargo ({})", cargo); */
+    println!("Packages: {}", how_many);
     println!("Defualt Shell: {}", usr_shell);
     println!("DE/WM: {}", de);
     println!("Terminal: {}", terminal);
     println!("CPU: {}", cpu_info);
+    gpu_find();
     println!("Memory: {}Mib / {}Mib ({:.2}%)", mem_used, mem.total/1024, mem_percent);
+
+}
+
+pub fn gpu_find() {
+    let mut gpus = Command::new("sh");
+    gpus.arg("-c");
+    gpus.arg("lspci | grep -i 'vga\\|3d\\|2d' | cut -d ':' -f3 | cut -d '[' -f2 | cut -d ']' -f1");
+    let gpu_out  = gpus.output()
+        .expect("failed to execute process")
+        .stdout;
+    let gpu_out = match str::from_utf8(&gpu_out) {
+        Ok(v) => v,
+        Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
+    };
+    let gpu_out = &gpu_out.replace("\n", ", ");
+    let gpu_out = &gpu_out[0..&gpu_out.len() - 2];
+    if gpu_out.contains(", ") {
+        println!("GPUs: {}", gpu_out);
+    } else {
+        println!("GPU: {}", gpu_out);
+    }
 }
 
 
-
-/*
+/* Todo:
 [ X ] OS
 [ X ] Host
 [ X ] Model
 [ X ] kernel
 [ X ] Uptime
 [ / ] Packages
+[ X ] PATH Binaries
 [ X ] Shell
 [   ] Resolution
 [ X ] DE
@@ -147,8 +197,8 @@ fn main() {
 [   ] Theme
 [   ] Icons
 [ X ] Terminal
-[   ] Terminal Font
+[ N ] Terminal Font (as far as i can tell not possible unless testing in every terminal)
 [ X ] CPU
-[   ] GPU
+[ X ] GPU
 [ X ] Memory
 */
