@@ -118,19 +118,24 @@ fn main() {
 
     // Checks current terminal
     use libmacchina::traits::GeneralReadout as _;
-    let terminal = titlecase(&GeneralReadout::new().terminal().unwrap());
+    let mut terminal = titlecase(&GeneralReadout::new().terminal().unwrap());
+    if terminal == "Kitty" {
+        terminal = terminal + " 🐱";
+    }
 
     // Checks CPU name and cores
     let cpu_info = GeneralReadout::new().cpu_model_name().unwrap();
 
     // Checks which GPUs you have
     //gpu_find();
+
     // Checks memory info
     let mem = mem_info().unwrap();
       let mem_used = mem.total/1024 - mem.avail/1024;
       let mem_percent: f32  = ((mem_used as f32)/((mem.total as f32)/1024.0)*100.0) as f32;
 
-
+    // Checks Screen Resolution info
+    let res_info = GeneralReadout::new().resolution().unwrap();
 
     // print outs
     println!("{}@{}", user_name, host_name);
@@ -153,7 +158,9 @@ fn main() {
     println!(" - Cargo ({})", cargo); */
     println!("Packages: {}", how_many);
     println!("Defualt Shell: {}", usr_shell);
+    println!("Screen Resolution: {}", res_info);
     println!("DE/WM: {}", de);
+    gtk_theme_find();
     println!("Terminal: {}", terminal);
     println!("CPU: {}", cpu_info);
     gpu_find();
@@ -181,6 +188,21 @@ pub fn gpu_find() {
     }
 }
 
+pub fn gtk_theme_find(){
+    let gtk_cmd = "cat $HOME/.config/gtk-3.0/settings.ini | grep gtk-theme-name | cut -d '=' -f2";
+    let mut gtk_theme = Command::new("sh");
+    gtk_theme.arg("-c");
+    gtk_theme.arg(gtk_cmd);
+    let gtk = gtk_theme.output()
+                       .expect("failed to execute process")
+                       .stdout;
+    let gtk = match str::from_utf8(&gtk) {
+        Ok(v) => v,
+        Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
+    };
+    let gtk = &gtk.replace("\n", "");
+    println!("GTK Theme: {}", gtk);
+}
 
 /* Todo:
 [ X ] OS
@@ -191,10 +213,10 @@ pub fn gpu_find() {
 [ / ] Packages
 [ X ] PATH Binaries
 [ X ] Shell
-[   ] Resolution
+[ X ] Resolution
 [ X ] DE
 [ X ] WM
-[   ] Theme
+[ X ] GTK Theme
 [   ] Icons
 [ X ] Terminal
 [ N ] Terminal Font (as far as i can tell not possible unless testing in every terminal)
