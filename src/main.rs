@@ -161,6 +161,7 @@ fn main() {
     println!("Screen Resolution: {}", res_info);
     println!("DE/WM: {}", de);
     gtk_theme_find();
+    gtk_icon_find();
     println!("Terminal: {}", terminal);
     println!("CPU: {}", cpu_info);
     gpu_find();
@@ -204,6 +205,21 @@ pub fn gtk_theme_find(){
     println!("GTK Theme: {}", gtk);
 }
 
+pub fn gtk_icon_find(){
+    let gtk_cmd = "cat $HOME/.config/gtk-3.0/settings.ini | grep gtk-icon-theme-name | cut -d '=' -f2";
+    let mut gtk_icon_theme = Command::new("sh");
+    gtk_icon_theme.arg("-c");
+    gtk_icon_theme.arg(gtk_cmd);
+    let gtk_icon = gtk_icon_theme.output()
+                                 .expect("failed to execute process")
+                                 .stdout;
+    let gtk_icon = match str::from_utf8(&gtk_icon) {
+        Ok(v) => v,
+        Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
+    };
+    let gtk_icon = &gtk_icon.replace("\n", "");
+    println!("GTK Icon Theme: {}", gtk_icon);
+}
 /* Todo:
 [ X ] OS
 [ X ] Host
@@ -223,4 +239,7 @@ pub fn gtk_theme_find(){
 [ X ] CPU
 [ X ] GPU
 [ X ] Memory
+*/
+/* Non-feature Specific Todos:
+[   ] Check for days with uptime
 */
