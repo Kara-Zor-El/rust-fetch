@@ -13,7 +13,7 @@ use uname::uname;
 use std::env;
 use libmacchina::GeneralReadout;
 extern crate sys_info;
-use sys_info::mem_info;
+use sys_info::{mem_info, cpu_num};
 
 
 fn main() {
@@ -148,7 +148,7 @@ fn main() {
     gtk_theme_find();
     gtk_icon_find();
     println!("Terminal: {}", terminal);
-    println!("CPU: {}", cpu_info);
+    println!("CPU: {} ({}%)", cpu_info, cpu_usage_info());
     gpu_find();
     println!("Memory: {}Mib / {}Mib ({:.2}%)", mem_used, mem.total/1024, mem_percent);
 
@@ -227,6 +227,36 @@ pub fn gtk_icon_find(){
     let gtk_icon = &gtk_icon.replace("\n", "");
     println!("GTK Icon Theme: {}", gtk_icon);
 }
+
+pub fn cpu_usage_info() -> String {
+    let cores = cpu_num().unwrap();
+    // println!("CPU cores: {}", cores); 
+
+    let mut cpu_usage = Command::new("sh");
+    cpu_usage.arg("-c");
+    cpu_usage.arg("ps aux | awk 'BEGIN {sum=0} {sum+=$3}; END {print sum}'");
+    let cpu_use_out = cpu_usage.output()
+        .expect("failed to execute process")
+        .stdout;
+
+    let cpu_use_out = match str::from_utf8(&cpu_use_out) {
+        Ok(v) => v,
+        Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
+    };
+    let cpu_use_out = &cpu_use_out.replace("\n", "");
+    // println!("cpu_use_out: {}", cpu_use_out);
+
+    let cpu_avg = match cpu_use_out.parse::<f32>() {
+        Ok(v) => v,
+        Err(_e) => 0.0,
+    };
+    let cores = cores as f32;
+    let cpu_avg = &cpu_avg / cores;
+    let cpu_avg = &cpu_avg.round();
+    //println!("CPU Usage: {}%", cpu_avg);
+    return cpu_avg.to_string();
+}
+
 /* Todo:
 [ X ] OS
 [ X ] Host
@@ -246,6 +276,14 @@ pub fn gtk_icon_find(){
 [ X ] CPU
 [ X ] GPU
 [ X ] Memory
+Others:
+[ X ] CPU Usage
+[   ] Disk
+[   ] Battery
+[   ] Song
+[   ] Local IP
+[   ] Public IP
+[   ] Users
 */
 /* Non-feature Specific Todos:
 [ X ] Check for days with uptime
