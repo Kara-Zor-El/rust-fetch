@@ -45,17 +45,6 @@ fn main() {
 
     let kernel = uname().unwrap().release; // kernel
 
-    // get uptime
-    let mut uptime_f = File::open("/proc/uptime")
-        .expect("Unable to open the file");
-    let mut uptime = String::new();
-    uptime_f.read_to_string(&mut uptime)
-        .expect("Unable to open the file");
-      let uptime: f32 = uptime.split(' ').collect::<Vec<&str>>()[0].parse().unwrap();
-
-      let hour = uptime.round() as u32 / 3600;
-      let rem = uptime as u32 - hour * 3600;
-      let minutes = rem / 60;
 
     // Do packages fully later
     // Package managers
@@ -144,11 +133,7 @@ fn main() {
     println!("OS: {}", os);
     println!("model: {}", model);
     println!("Kernel: {}", kernel);
-    if hour > 0 {
-        println!("Uptime: {} hours, {} minutes", hour, minutes);
-    } else {
-        println!("Uptime: {} minutes", minutes);
-    };
+    uptime_time();
     // files exists?
     /* println!(" - Pacman exists? {}", pac_e);
     println!(" - APT exists? {}", apt_e);
@@ -167,6 +152,28 @@ fn main() {
     gpu_find();
     println!("Memory: {}Mib / {}Mib ({:.2}%)", mem_used, mem.total/1024, mem_percent);
 
+}
+
+pub fn uptime_time(){
+    let mut uptime_f = File::open("/proc/uptime")
+        .expect("Unable to open the file");
+    let mut uptime = String::new();
+    uptime_f.read_to_string(&mut uptime)
+            .expect("Unable to open the file");
+    let uptime: f32 = uptime.split(' ').collect::<Vec<&str>>()[0].parse().unwrap();
+
+    let hour = uptime.round() as u32 / 3600;
+    let rem = uptime as u32 - hour * 3600;
+    let minutes = rem / 60;
+    let day = hour as u32 / 24;
+    let hour = &hour - day * 24;
+    if day > 0 {
+        println!("Uptime: {} days, {} hours, {} min", day, hour, minutes);
+    } else if day <= 0 && hour > 0 {
+        println!("Uptime: {} hours, {} min", hour, minutes);
+    } else {
+        println!("Uptime: {} min", minutes);
+    }
 }
 
 pub fn gpu_find() {
@@ -233,7 +240,7 @@ pub fn gtk_icon_find(){
 [ X ] DE
 [ X ] WM
 [ X ] GTK Theme
-[   ] Icons
+[ X ] GTK Icons
 [ X ] Terminal
 [ N ] Terminal Font (as far as i can tell not possible unless testing in every terminal)
 [ X ] CPU
@@ -241,5 +248,5 @@ pub fn gtk_icon_find(){
 [ X ] Memory
 */
 /* Non-feature Specific Todos:
-[   ] Check for days with uptime
+[ X ] Check for days with uptime
 */
