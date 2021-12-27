@@ -228,33 +228,24 @@ pub fn gtk_icon_find(){
     println!("GTK Icon Theme: {}", gtk_icon);
 }
 
-pub fn cpu_usage_info() -> String {
+pub fn cpu_usage_info() -> f32 {
     let cores = cpu_num().unwrap();
-    // println!("CPU cores: {}", cores); 
 
-    let mut cpu_usage = Command::new("sh");
-    cpu_usage.arg("-c");
-    cpu_usage.arg("ps aux | awk 'BEGIN {sum=0} {sum+=$3}; END {print sum}'");
-    let cpu_use_out = cpu_usage.output()
+    let cpu_use_out = Command::new("sh")
+        .arg("-c")
+        .arg("ps aux | awk 'BEGIN {sum=0} {sum+=$3}; END {print sum}'")
+        .output()
         .expect("failed to execute process")
         .stdout;
 
-    let cpu_use_out = match str::from_utf8(&cpu_use_out) {
-        Ok(v) => v,
-        Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
-    };
-    let cpu_use_out = &cpu_use_out.replace("\n", "");
-    // println!("cpu_use_out: {}", cpu_use_out);
-
-    let cpu_avg = match cpu_use_out.parse::<f32>() {
-        Ok(v) => v,
-        Err(_e) => 0.0,
-    };
-    let cores = cores as f32;
-    let cpu_avg = &cpu_avg / cores;
-    let cpu_avg = &cpu_avg.round();
-    //println!("CPU Usage: {}%", cpu_avg);
-    return cpu_avg.to_string();
+    let cpu_use = str::from_utf8(&cpu_use_out)
+        .expect("cpu usage not utf-8")
+        .trim()
+        .parse::<f32>()
+        .expect("cpu usage not a number");
+    // let cpu_use = &cpu_use.replace("\n", "");
+    let cpu_avg = (cpu_use / cores as f32).round();
+    return cpu_avg;
 }
 
 /* Todo:
@@ -278,7 +269,7 @@ pub fn cpu_usage_info() -> String {
 [ X ] Memory
 Others:
 [ X ] CPU Usage
-[   ] Disk
+[   ] Disk (KDE partition manager, my results and neofetches results do not line up with any of each other so will do more research later)
 [   ] Battery
 [   ] Song
 [   ] Local IP
