@@ -151,7 +151,8 @@ fn main() {
     println!("CPU: {} ({}%)", cpu_info, cpu_usage_info());
     gpu_find();
     println!("Memory: {}Mib / {}Mib ({:.2}%)", mem_used, mem.total/1024, mem_percent);
-
+    let (per, state) = battery_percentage();
+    println!("Battery: {}% [{}]", per, state);
 }
 
 pub fn uptime_time(){
@@ -247,6 +248,33 @@ pub fn cpu_usage_info() -> f32 {
     let cpu_avg = (cpu_use / cores as f32).round();
     return cpu_avg;
 }
+pub fn battery_percentage() -> (i8, String) {
+    let battery_out = Command::new("sh")
+        .arg("-c")
+        .arg("upower -i `upower -e | grep 'BAT'` | grep 'percentage:' | tail -c 5")
+        .output()
+        .expect("failed to execute process")
+        .stdout;
+    let battery_per = str::from_utf8(&battery_out)
+        .expect("battery output not utf-8")
+        .trim()
+        .replace("%", "")
+        .parse::<i8>()
+        .expect("battery output not a number");
+
+    let state = Command::new("sh")
+        .arg("-c")
+        .arg("upower -i `upower -e | grep 'BAT'` | grep 'state:' | awk 'NF>1{print $NF}'")
+        .output()
+        .expect("failed ot execute process")
+        .stdout;
+
+    let battery_state = str::from_utf8(&state)
+        .expect("battery status not utf-8")
+        .trim()
+        .to_string();
+    return (battery_per, battery_state);
+}
 
 /* Todo:
 [ X ] OS
@@ -270,7 +298,7 @@ pub fn cpu_usage_info() -> f32 {
 Others:
 [ X ] CPU Usage
 [   ] Disk (KDE partition manager, my results and neofetches results do not line up with any of each other so will do more research later)
-[   ] Battery
+[ X ] Battery
 [   ] Song
 [   ] Local IP
 [   ] Public IP
