@@ -2,6 +2,8 @@
 /*
 use std::path::Path;
 use walkdir::WalkDir;
+use local_ip_address::local_ip;
+use my_public_ip::resolve;
 */ // unused crates
 use std::str;
 use std::process::Command;
@@ -14,7 +16,6 @@ use std::env;
 use libmacchina::GeneralReadout;
 extern crate sys_info;
 use sys_info::{mem_info, cpu_num};
-
 
 fn main() {
     //println!("rustFetch");
@@ -153,6 +154,8 @@ fn main() {
     println!("Memory: {}Mib / {}Mib ({:.2}%)", mem_used, mem.total/1024, mem_percent);
     let (per, state) = battery_percentage();
     println!("Battery: {}% [{}]", per, state);
+    // let (local_ip, public_ip) = ip();
+    // println!("IP: {} [Local], {} [Public]", local_ip, public_ip);
 }
 
 pub fn uptime_time(){
@@ -276,6 +279,13 @@ pub fn battery_percentage() -> (i8, String) {
     return (battery_per, battery_state);
 }
 
+// pub fn ip() -> (String, String){
+//    let my_local_ip = local_ip().unwrap().to_string();
+//    let my_public_ip = my_public_ip::resolve().unwrap().to_string();
+//
+//    return (my_local_ip, my_public_ip);
+//}
+
 /* Todo:
 [ X ] OS
 [ X ] Host
@@ -300,8 +310,8 @@ Others:
 [   ] Disk (KDE partition manager, my results and neofetches results do not line up with any of each other so will do more research later)
 [ X ] Battery
 [   ] Song
-[   ] Local IP
-[   ] Public IP
+[ X ] Local IP
+[ X ] Public IP
 [   ] Users
 */
 /* Non-feature Specific Todos:
