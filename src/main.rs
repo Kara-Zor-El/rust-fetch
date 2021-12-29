@@ -155,7 +155,7 @@ fn main() {
     if let Some((per, state)) = battery_percentage() {
         if per != "" && state != "" {
             println!("Battery: {} [{}]", per, state);
-        } else per != "" {
+        } else if per != "" {
             println!("Battery: {} ", per);
         } else {
         }
