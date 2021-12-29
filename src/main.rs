@@ -152,8 +152,9 @@ fn main() {
     println!("CPU: {} ({}%)", cpu_info, cpu_usage_info());
     gpu_find();
     println!("Memory: {}Mib / {}Mib ({:.2}%)", mem_used, mem.total/1024, mem_percent);
-    let (per, state) = battery_percentage();
-    println!("Battery: {}% [{}]", per, state);
+    if let Some((per, state)) = battery_percentage() {
+        println!("Battery: {}% [{}]", per, state);
+    }
     // let (local_ip, public_ip) = ip();
     // println!("IP: {} [Local], {} [Public]", local_ip, public_ip);
 }
@@ -251,7 +252,7 @@ pub fn cpu_usage_info() -> f32 {
     let cpu_avg = (cpu_use / cores as f32).round();
     return cpu_avg;
 }
-pub fn battery_percentage() -> (i8, String) {
+pub fn battery_percentage() -> Option<(i8, String)> {
     let battery_out = Command::new("sh")
         .arg("-c")
         .arg("upower -i `upower -e | grep 'BAT'` | grep 'percentage:' | tail -c 5")
@@ -276,7 +277,9 @@ pub fn battery_percentage() -> (i8, String) {
         .expect("battery status not utf-8")
         .trim()
         .to_string();
-    return (battery_per, battery_state);
+
+
+    return Some((battery_per, battery_state));
 }
 
 // pub fn ip() -> (String, String){
@@ -311,7 +314,7 @@ Others:
 [ X ] Battery
 [   ] Song
 [ X ] Local IP
-[ X ] Public IP
+[ X ] Public IP (these 2 doubled runtime so disabled by default)
 [   ] Users
 */
 /* Non-feature Specific Todos:
