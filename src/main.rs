@@ -153,7 +153,12 @@ fn main() {
     gpu_find();
     println!("Memory: {}Mib / {}Mib ({:.2}%)", mem_used, mem.total/1024, mem_percent);
     if let Some((per, state)) = battery_percentage() {
-        println!("Battery: {} [{}]", per, state);
+        if per != "" && state != "" {
+            println!("Battery: {} [{}]", per, state);
+        } else per != "" {
+            println!("Battery: {} ", per);
+        } else {
+        }
     }
     // let (local_ip, public_ip) = ip();
     // println!("IP: {} [Local], {} [Public]", local_ip, public_ip);
