@@ -153,7 +153,7 @@ fn main() {
     gpu_find();
     println!("Memory: {}Mib / {}Mib ({:.2}%)", mem_used, mem.total/1024, mem_percent);
     if let Some((per, state)) = battery_percentage() {
-        println!("Battery: {}% [{}]", per, state);
+        println!("Battery: {} [{}]", per, state);
     }
     // let (local_ip, public_ip) = ip();
     // println!("IP: {} [Local], {} [Public]", local_ip, public_ip);
@@ -252,7 +252,7 @@ pub fn cpu_usage_info() -> f32 {
     let cpu_avg = (cpu_use / cores as f32).round();
     return cpu_avg;
 }
-pub fn battery_percentage() -> Option<(i8, String)> {
+pub fn battery_percentage() -> Option<(String, String)> {
     let battery_out = Command::new("sh")
         .arg("-c")
         .arg("upower -i `upower -e | grep 'BAT'` | grep 'percentage:' | tail -c 5")
@@ -262,9 +262,10 @@ pub fn battery_percentage() -> Option<(i8, String)> {
     let battery_per = str::from_utf8(&battery_out)
         .expect("battery output not utf-8")
         .trim()
-        .replace("%", "")
-        .parse::<i8>()
-        .expect("battery output not a number");
+        //.replace("%", "")
+        //.parse::<i8>()
+        .to_string();
+        //.expect("battery output not a string");
 
     let state = Command::new("sh")
         .arg("-c")
