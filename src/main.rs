@@ -14,7 +14,6 @@ use titlecase::titlecase;
 use uname::uname;
 use std::env;
 use libmacchina::GeneralReadout;
-extern crate sys_info;
 use sys_info::{mem_info, cpu_num};
 
 fn main() {
@@ -162,6 +161,11 @@ fn main() {
     }
     // let (local_ip, public_ip) = ip();
     // println!("IP: {} [Local], {} [Public]", local_ip, public_ip);
+    if let Some(users) = user_list() {
+        if users != "" {
+            println!("users: {}", users);
+        }
+    }
 }
 
 pub fn uptime_time(){
@@ -286,6 +290,20 @@ pub fn battery_percentage() -> Option<(String, String)> {
 
 
     return Some((battery_per, battery_state));
+}
+
+pub fn user_list() -> Option<String> {
+    let users = Command::new("sh")
+        .arg("-c")
+        .arg("awk -F':' '{ if($3 >= 1000 && $3 <= 6000) {print $1}}' /etc/passwd")
+        .output()
+        .expect("failed to execute process")
+        .stdout;
+    let user_out = str::from_utf8(&users)
+        .expect("users output not utf-8")
+        .trim()
+        .replace("\n", ", ");
+    return Some(user_out);
 }
 
 // pub fn ip() -> (String, String){
