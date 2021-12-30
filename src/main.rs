@@ -17,34 +17,12 @@ use libmacchina::GeneralReadout;
 use sys_info::{mem_info, cpu_num};
 
 fn main() {
-    //println!("rustFetch");
-
-    /* let mut host_name_file = File::open("/etc/hostname").unwrap();
-    let mut host_name = String::new();
-    host_name_file.read_to_string(&mut host_name).unwrap();*/
-
     let user_name = titlecase(&whoami::username()); // username
     let host_name = whoami::devicename(); // hostname
     let title_length = host_name.chars().count() + user_name.chars().count() + 1; //length of hostname and username + @ symbol
     let os = whoami::distro(); // distro (and version if not rolling release)
 
-
-    // devices model
-    let mut product_name = File::open("/sys/devices/virtual/dmi/id/product_name")
-        .expect("Unable to open the file");
-
-    let mut product_version = File::open("/sys/devices/virtual/dmi/id/product_version")
-        .expect("Unable to open the file");
-
-    let mut model = String::new();
-    product_name.read_to_string(&mut model)
-        .expect("Unable to read the file"); // gets product name
-    let _ = product_version.read_to_string(&mut model)
-        .expect("Unable to read the file"); // get number revision
-    let model = model.replace("\n", " ");
-
     let kernel = uname().unwrap().release; // kernel
-
 
     // Do packages fully later
     // Package managers
@@ -131,7 +109,11 @@ fn main() {
     // println!("{}", title_length); // prints length of title
     println!("{:-<1$}", "", title_length);
     println!("OS: {}", os);
-    println!("model: {}", model);
+    if let Some(model) = device_model() {
+        if model != "" {
+            println!("Model: {}", model);
+        }
+    }
     println!("Kernel: {}", kernel);
     uptime_time();
     // files exists?
@@ -306,6 +288,23 @@ pub fn user_list() -> Option<String> {
     return Some(user_out);
 }
 
+fn device_model() -> Option<String> {
+    let mut product_name = File::open("/sys/devices/virtual/dmi/id/product_name")
+        .expect("Unable to open the file");
+
+    let mut product_version = File::open("/sys/devices/virtual/dmi/id/product_version")
+        .expect("Unable to open the file");
+
+    let mut model = String::new();
+    product_name.read_to_string(&mut model)
+        .expect("Unable to read the file"); // gets product name
+    let _ = product_version.read_to_string(&mut model)
+        .expect("Unable to read the file"); // get number revision
+    let model = model.replace("\n", " ");
+    return Some(model);
+}
+
+
 // pub fn ip() -> (String, String){
 //    let my_local_ip = local_ip().unwrap().to_string();
 //    let my_public_ip = my_public_ip::resolve().unwrap().to_string();
@@ -339,7 +338,7 @@ Others:
 [   ] Song
 [ X ] Local IP
 [ X ] Public IP (these 2 doubled runtime so disabled by default)
-[   ] Users
+[ X ] Users
 */
 /* Non-feature Specific Todos:
 [ X ] Check for days with uptime
