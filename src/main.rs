@@ -24,7 +24,8 @@ fn main() {
 
     let kernel = uname().unwrap().release; // kernel
 
-    // Do packages fully later
+
+    /*// Do packages fully later
     // Package managers
     /* Todo List: // append all that exist to string and print string
     [/] pacman
@@ -69,7 +70,7 @@ fn main() {
             }
         }
     }
-    let how_many = &how_many[0..how_many.len() - 2];
+    let how_many = &how_many[0..how_many.len() - 2];*/
 
 
     // User Shell
@@ -123,7 +124,11 @@ fn main() {
     println!(" - Cargo exists? {}", cargo_e);
     println!(" - Flatpak exists? {}", flatpak_e);
     println!(" - Cargo ({})", cargo); */
-    println!("Packages: {}", how_many);
+    if let Some(how_many) = packages("option1") {
+        if how_many != "" {
+            println!("Packages: {}", how_many);
+        }
+    }
     println!("Defualt Shell: {}", usr_shell);
     println!("Screen Resolution: {}", res_info);
     println!("DE/WM: {}", de);
@@ -262,7 +267,7 @@ pub fn battery_percentage() -> Option<(String, String)> {
         .arg("-c")
         .arg("upower -i `upower -e | grep 'BAT'` | grep 'state:' | awk 'NF>1{print $NF}'")
         .output()
-        .expect("failed ot execute process")
+        .expect("failed to execute process")
         .stdout;
 
     let battery_state = str::from_utf8(&state)
@@ -303,7 +308,128 @@ fn device_model() -> Option<String> {
     let model = model.replace("\n", " ");
     return Some(model);
 }
+fn packages(which: &str) -> Option<String> {
+    let mut how_many = String::new();
+    if which == "option1" {
+    // Do packages fully later
+    // Package managers
+    /* Todo List: // append all that exist to string and print string
+    [X] pacman
+    [X] apt
+    [X] pip
+    [X] cargo
+    [X] flatpak
+    [ ] appimages
+     */
+        // check if pacman exists
+        let pac_e = std::path::Path::new("/bin/pacman").exists() | std::path::Path::new("/usr/bin/pacman").exists();
+        // check if apt exists
+        let apt_e = std::path::Path::new("/bin/apt").exists() | std::path::Path::new("/usr/bin/apt").exists();
+        // check if pip exists
+        let pip_e = std::path::Path::new("/bin/pip").exists() | std::path::Path::new("/usr/bin/pip").exists() | std::path::Path::new("/bin/pip3").exists() | std::path::Path::new("/usr/bin/pip3").exists();
+        // check if cargo exists
+        let cargo_e = std::path::Path::new("/bin/cargo").exists() | std::path::Path::new("/usr/bin/cargo").exists();
+        // check if flatpak exists
+        let flatpak_e = std::path::Path::new("/bin/flatpak").exists() | std::path::Path::new("/usr/bin/flatpak").exists();
 
+        // checks how many files cargo has
+        if cargo_e == true {
+            let cargo_dir: String = "/home/".to_owned() + &whoami::username() + "/.cargo/bin";
+            let cargo = fs::read_dir(cargo_dir).unwrap().count();
+            how_many += "Cargo (";
+            how_many += cargo.to_string().as_str();
+            how_many += ")";
+        }
+        if pac_e == true {
+            let pacman = Command::new("sh")
+                .arg("-c")
+                .arg("pacman -Q | wc -l")
+                .output()
+                .expect("failed to execute process")
+                .stdout;
+            let pacman_out = str::from_utf8(&pacman)
+                .expect("pacman output not utf-8")
+                .trim();
+            if pacman_out != ""  {
+                how_many += ", Pacman (";
+                how_many += pacman_out;
+                how_many += ")";
+            }
+        }
+        if apt_e == true {
+            let apt = Command::new("sh")
+                .arg("-c")
+                .arg("dpkg -l | wc -l")
+                .output()
+                .expect("failed to execute process")
+                .stdout;
+            let apt_out = str::from_utf8(&apt)
+                .expect("apt output not uft-8")
+                .trim();
+            if apt_out != "" {
+                how_many += ", APT (";
+                how_many += apt_out;
+                how_many += ")";
+            }
+        }
+        if pip_e == true {
+            let pip = Command::new("sh")
+                .arg("-c")
+                .arg("pip list | wc -l")
+                .output()
+                .expect("failed  to execute process")
+                .stdout;
+            let mut pip_out = str::from_utf8(&pip)
+                .expect("pip status not utf-8")
+                .trim()
+                .parse::<i8>()
+                .expect("pip output not uft-8");
+            pip_out -= 2;
+            if pip_out != 0 {
+                how_many += ", pip (";
+                how_many += pip_out.to_string().as_str();
+                how_many += ")";
+            }
+        }
+
+        if flatpak_e == true { // I think i used the wrong flatpak directories. should investagate when on wifi
+            let flatpak_dir_system: String = "/var/lib/flatpak".to_string();
+            let flatpak_dir_user: String = "/home/".to_string() + &whoami::username().to_string() + "/.local/share/flatpak";
+            let flatpak = fs::read_dir(flatpak_dir_system).unwrap().count() + fs::read_dir(flatpak_dir_user).unwrap().count();
+            if flatpak.to_string() != "" {
+                how_many += ", Flatpak (";
+                how_many += flatpak.to_string().as_str();
+                how_many += ")";
+            }
+        }
+
+    } else if which == "option2" {
+
+        // Checks packages in all directories in $PATH
+        let path = env::var("PATH").expect("$PATH is not set");
+        let data = path.split(':');
+        how_many = "".to_string();
+        let home_dir = "/home/".to_owned() + &whoami::username();
+        for s in data {
+            // println!("PATH: {}", s);
+            if s != "" && std::path::Path::new(s).exists() == true {
+                if fs::read_dir(s).unwrap().count().to_string().as_str() != "0" {
+                    if s.contains(&home_dir) {
+                        how_many.push_str(s.replace(&home_dir, "~").to_string().as_str());
+                    } else {
+                        how_many.push_str(s);
+                    }
+                    how_many.push_str(" (");
+                    how_many.push_str(fs::read_dir(s).unwrap().count().to_string().as_str());
+                    how_many.push_str("), ");
+                    // println!("Packages: {:?}", how_many);
+                }
+            }
+        }
+        let how_many = &how_many[0..how_many.len() - 2];
+    }
+    return Some(how_many.to_string());
+}
 
 // pub fn ip() -> (String, String){
 //    let my_local_ip = local_ip().unwrap().to_string();
@@ -318,7 +444,7 @@ fn device_model() -> Option<String> {
 [ X ] Model
 [ X ] kernel
 [ X ] Uptime
-[ / ] Packages
+[ / ] Packages (add appimages)
 [ X ] PATH Binaries
 [ X ] Shell
 [ X ] Resolution
