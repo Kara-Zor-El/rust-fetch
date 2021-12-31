@@ -39,7 +39,7 @@
 - Firstly, [download](https://rustup.rs/) and install **Rust** and **Cargo** using Rustup. (Cargo Version 1.57.0 or greater is reccomended)
 - Then run the command `git clone https://github.com/Kara-Zor-El/rust-fetch.git` and `cd rust-fetch`
 - Test to see if it works before installling it by running `cargo run`
-- After verifying tht it works do `cp target/debug/rust-fetch ~/.cargo/bin` and verify it works with `rust-fetch`
+- After verifying tht it works do `cargo build`, then `cp target/debug/rust-fetch ~/.cargo/bin` and verify it works with `rust-fetch`
 
 ## 📦 Credits
 - The Rust Core Dev team for their amazing Language
