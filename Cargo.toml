@@ -2,6 +2,12 @@
 name = "rust-fetch"
 version = "0.1.0"
 edition = "2021"
+authors = ["Kara Wilson <ms.kara.wilson@gmail.com"]
+include = ["src/**/*"]
+license = "MIT"
+description = "A simple yet (hopefully) customizable neofetch clone written in rust"
+repository = "https://github.com/Kara-Zor-El/rust-fetch"
+readme = "README.md" 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
