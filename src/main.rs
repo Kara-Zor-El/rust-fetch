@@ -77,7 +77,7 @@ fn main() {
     let usr_shell = env::var("SHELL").expect("$SHELL is not set");
 
     // Checks users desktop Env
-    let mut de = env::var("XDG_CURRENT_DESKTOP")
+    let de = env::var("XDG_CURRENT_DESKTOP")
         .expect("$XDG_CURRENT_DESKTOP is not set"); /* +
         " " +
         &env::var("DESKTOP_SESSION")
@@ -426,9 +426,9 @@ fn packages(which: &str) -> Option<String> {
                 }
             }
         }
-        let how_many = &how_many[0..how_many.len() - 2];
+        how_many = (&how_many[0..how_many.len() - 2]).to_string();
     }
-    return Some(how_many.to_string());
+    Some(how_many.to_string())
 }
 
 // pub fn ip() -> (String, String){
@@ -468,4 +468,9 @@ Others:
 */
 /* Non-feature Specific Todos:
 [ X ] Check for days with uptime
+ */
+
+/* ⚠ISSUES:⚠
+- [ ] No wayland suppport
+- [ ] inaccurate memory usage
 */
