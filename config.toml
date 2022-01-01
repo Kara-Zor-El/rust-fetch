@@ -1,0 +1,13 @@
+# package options are "package-manager" or "path"
+packages = "package-managers"
+info_color = "magenta"
+
+# Colors - 
+# black
+# red
+# green
+# yellow
+# blue
+# magenta
+# cyan
+# white
