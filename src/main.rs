@@ -15,63 +15,23 @@ use uname::uname;
 use std::env;
 use libmacchina::GeneralReadout;
 use sys_info::{mem_info, cpu_num};
+use directories::ProjectDirs;
+use serde::Deserialize;
+use colored::Colorize;
+
+#[derive(Deserialize)]
+struct Config {
+    packages: String,
+    info_color: String,
+}
 
 fn main() {
     let user_name = titlecase(&whoami::username()); // username
     let host_name = whoami::devicename(); // hostname
-    let title_length = host_name.chars().count() + user_name.chars().count() + 1; //length of hostname and username + @ symbol
+    let title_length = host_name.chars().count() + user_name.chars().count() + 3; //length of hostname and username + @ symbol
     let os = whoami::distro(); // distro (and version if not rolling release)
 
     let kernel = uname().unwrap().release; // kernel
-
-
-    /*// Do packages fully later
-    // Package managers
-    /* Todo List: // append all that exist to string and print string
-    [/] pacman
-    [/] apt
-    [/] pip
-    [X] cargo
-    [/] flatpak
-     */
-    // check if pacman exists
-    let pac_e = std::path::Path::new("/bin/pacman").exists() | std::path::Path::new("/usr/bin/pacman").exists();
-    // check if apt exists
-    let apt_e = std::path::Path::new("/bin/apt").exists() | std::path::Path::new("/usr/bin/apt").exists();
-    // check if pip exists
-    let pip_e = std::path::Path::new("/bin/pip").exists() | std::path::Path::new("/usr/bin/pip").exists() | std::path::Path::new("/bin/pip3").exists() | std::path::Path::new("/usr/bin/pip3").exists();
-    // check if cargo exists
-    let cargo_e = std::path::Path::new("/bin/cargo").exists() | std::path::Path::new("/usr/bin/cargo").exists();
-    // check if flatpak exists
-    let flatpak_e = std::path::Path::new("/bin/flatpak").exists() | std::path::Path::new("/usr/bin/flatpak").exists();
-
-    // checks how many files cargo has
-    let cargo_dir: String = "/home/".to_owned() + &whoami::username() + "/.cargo/bin";
-    let cargo = fs::read_dir(cargo_dir).unwrap().count();
-
-    // Checks packages in all directories in $PATH
-    let mut path = env::var("PATH").expect("$PATH is not set");
-    let data = path.split(':');
-    let mut how_many = "".to_string();
-    let home_dir = "/home/".to_owned() + &whoami::username();
-    for s in data {
-        // println!("PATH: {}", s);
-        if s != "" && std::path::Path::new(s).exists() == true {
-            if fs::read_dir(s).unwrap().count().to_string().as_str() != "0" {
-                if s.contains(&home_dir) {
-                    how_many.push_str(s.replace(&home_dir, "~").to_string().as_str());
-                } else {
-                    how_many.push_str(s);
-                }
-                how_many.push_str(" (");
-                how_many.push_str(fs::read_dir(s).unwrap().count().to_string().as_str());
-                how_many.push_str("), ");
-                // println!("Packages: {:?}", how_many);
-            }
-        }
-    }
-    let how_many = &how_many[0..how_many.len() - 2];*/
-
 
     // User Shell
     let usr_shell = env::var("SHELL").expect("$SHELL is not set");
@@ -106,56 +66,127 @@ fn main() {
     let res_info = GeneralReadout::new().resolution().unwrap();
 
     // print outs
-    println!("{}@{}", user_name, host_name);
     // println!("{}", title_length); // prints length of title
-    println!("{:-<1$}", "", title_length);
-    println!("OS: {}", os);
-    if let Some(model) = device_model() {
-        if model != "" {
-            println!("Model: {}", model);
+    if let Some(proj_dirs) = ProjectDirs::from("dev", "Kara-Wilson", "rust-fetch") {
+        let config_dir = proj_dirs.config_dir();
+
+        let config_file = fs::read_to_string(
+            config_dir.join("config.toml"),
+        );
+
+        let config: Config = match config_file {
+            Ok(file) => toml::from_str(&file).unwrap(),
+            Err(_) => Config {
+                packages: "path".to_string(),
+                info_color: "blue".to_string(),
+            },
+        };
+
+        println!("{} {} {}", user_name.color(config.info_color.clone()), "@".blue().bold(), host_name.color(config.info_color.clone()));
+
+        println!("{:—<1$}", "", title_length);
+
+        println!("{} {}",
+                 "OS:".color(config.info_color.clone()).bold(),
+                 os.normal());
+
+        if let Some(model) = device_model() {
+            if model != "" {
+                println!("{} {}",
+                         "Model:".color(config.info_color.clone()).bold(),
+                         model.normal());
+            }
         }
-    }
-    println!("Kernel: {}", kernel);
-    uptime_time();
-    // files exists?
-    /* println!(" - Pacman exists? {}", pac_e);
-    println!(" - APT exists? {}", apt_e);
-    println!(" - PIP exists? {}", pip_e);
-    println!(" - Cargo exists? {}", cargo_e);
-    println!(" - Flatpak exists? {}", flatpak_e);
-    println!(" - Cargo ({})", cargo); */
-    if let Some(how_many) = packages("option1") {
-        if how_many != "" {
-            println!("Packages: {}", how_many);
+
+        println!("{} {}",
+                 "Kernel:".color(config.info_color.clone()).bold(),
+                 kernel.normal());
+
+        println!("{} {}",
+                 "Uptime:".color(config.info_color.clone()).bold(),
+                 uptime_time().normal());
+        if let Some(how_many) = packages(&config.packages) {
+
+            if how_many != "" {
+                println!("{} {}",
+                         "Packages:".color(config.info_color.clone()).bold(),
+                         how_many.normal());
+            }
         }
-    }
-    println!("Defualt Shell: {}", usr_shell);
-    println!("Screen Resolution: {}", res_info);
-    println!("DE/WM: {}", de);
-    gtk_theme_find();
-    gtk_icon_find();
-    println!("Terminal: {}", terminal);
-    println!("CPU: {} ({}%)", cpu_info, cpu_usage_info());
-    gpu_find();
-    println!("Memory: {}Mib / {}Mib ({:.2}%)", mem_used, mem.total/1024, mem_percent);
-    if let Some((per, state)) = battery_percentage() {
-        if per != "" && state != "" {
-            println!("Battery: {} [{}]", per, state);
-        } else if per != "" {
-            println!("Battery: {} ", per);
+        if usr_shell != "" {
+            println!("{} {}",
+                     "Defualt Shell:".color(config.info_color.clone()).bold(),
+                     usr_shell.normal());
+        }
+        println!("{} {}",
+                 "Screen Resolution:".color(config.info_color.clone()).bold(),
+                 res_info.normal());
+        println!("{} {}",
+                 "DE/WM:".color(config.info_color.clone()).bold(),
+                 de.normal());
+        println!("{} {}",
+                 "GTK Theme:".color(config.info_color.clone()).bold(),
+                 gtk_theme_find().normal());
+        println!("{} {}",
+                 "GTK Icon Theme:".color(config.info_color.clone()).bold(),
+                 gtk_icon_find().normal());
+        println!("{} {}",
+                 "Terminal:".color(config.info_color.clone()).bold(),
+                 terminal.normal());
+        println!("{} {} {}{}{}",
+                 "CPU:".color(config.info_color.clone()).bold(),
+                 cpu_info.normal(),
+                 "(".normal(),
+                 cpu_usage_info(),
+                 "%)");
+
+        if gpu_find().contains(", ") {
+            println!("{} {}",
+                     "GPUs:".color(config.info_color.clone()).bold(),
+                     gpu_find().normal());
         } else {
+            println!("{} {}",
+                     "GPU: {}".color(config.info_color.clone()).bold(),
+                     gpu_find().normal());
+        }
+
+        println!("{} {}{}{}{}{:.2}{}",
+                 "Memory:".color(config.info_color.clone()).bold(),
+                 mem_used.to_string().normal(),
+                 "Mib / ",
+                 mem.total/1024,
+                 "Mib (",
+                 mem_percent,
+                 "%)");
+        if let Some((per, state)) = battery_percentage() {
+            if per != "" && state != "" {
+                println!("{} {} {}{}{}",
+                         "Battery:".color(config.info_color.clone()).bold(),
+                         per.normal(),
+                         "[",
+                         state,
+                         "]");
+            } else if per != "" {
+                println!("{} {}",
+                         "Battery:".color(config.info_color.clone()).bold(),
+                         per.normal());
+            } else {
+            }
+        }
+        if let Some(users) = user_list() {
+            if users != "" {
+                println!("{} {}",
+                         "users:".color(config.info_color.clone()).bold(),
+                         users.normal());
+            }
         }
     }
     // let (local_ip, public_ip) = ip();
     // println!("IP: {} [Local], {} [Public]", local_ip, public_ip);
-    if let Some(users) = user_list() {
-        if users != "" {
-            println!("users: {}", users);
-        }
-    }
 }
 
-pub fn uptime_time(){
+pub fn uptime_time() -> String {
+    let mut output = String::new();
     let mut uptime_f = File::open("/proc/uptime")
         .expect("Unable to open the file");
     let mut uptime = String::new();
@@ -169,15 +200,25 @@ pub fn uptime_time(){
     let day = hour as u32 / 24;
     let hour = &hour - day * 24;
     if day > 0 {
-        println!("Uptime: {} days, {} hours, {} min", day, hour, minutes);
+        output += &day.to_string();
+        output += " days, ";
+        output += &hour.to_string();
+        output += " hours, ";
+        output += &minutes.to_string();
+        output += " min";
     } else if day <= 0 && hour > 0 {
-        println!("Uptime: {} hours, {} min", hour, minutes);
+        output += &hour.to_string();
+        output += " hours, ";
+        output += &minutes.to_string();
+        output += " mins";
     } else {
-        println!("Uptime: {} min", minutes);
+        output += &minutes.to_string();
+        output += " min";
     }
+    output
 }
 
-pub fn gpu_find() {
+pub fn gpu_find() -> String {
     let mut gpus = Command::new("sh");
     gpus.arg("-c");
     gpus.arg("lspci | grep -i 'vga\\|3d\\|2d' | cut -d ':' -f3 | cut -d '[' -f2 | cut -d ']' -f1");
@@ -190,14 +231,16 @@ pub fn gpu_find() {
     };
     let gpu_out = &gpu_out.replace("\n", ", ");
     let gpu_out = &gpu_out[0..&gpu_out.len() - 2];
-    if gpu_out.contains(", ") {
-        println!("GPUs: {}", gpu_out);
-    } else {
-        println!("GPU: {}", gpu_out);
-    }
+    // if gpu_out.contains(", ") {
+    //     println!("GPUs: {}", gpu_out);
+    // } else {
+    //     println!("GPU: {}", gpu_out);
+    // }
+
+    gpu_out.to_string()
 }
 
-pub fn gtk_theme_find(){
+pub fn gtk_theme_find() -> String {
     let gtk_cmd = "cat $HOME/.config/gtk-3.0/settings.ini | grep gtk-theme-name | cut -d '=' -f2";
     let mut gtk_theme = Command::new("sh");
     gtk_theme.arg("-c");
@@ -210,10 +253,10 @@ pub fn gtk_theme_find(){
         Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
     };
     let gtk = &gtk.replace("\n", "");
-    println!("GTK Theme: {}", gtk);
+    gtk.to_string()
 }
 
-pub fn gtk_icon_find(){
+pub fn gtk_icon_find() -> String {
     let gtk_cmd = "cat $HOME/.config/gtk-3.0/settings.ini | grep gtk-icon-theme-name | cut -d '=' -f2";
     let mut gtk_icon_theme = Command::new("sh");
     gtk_icon_theme.arg("-c");
@@ -226,7 +269,7 @@ pub fn gtk_icon_find(){
         Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
     };
     let gtk_icon = &gtk_icon.replace("\n", "");
-    println!("GTK Icon Theme: {}", gtk_icon);
+    gtk_icon.to_string()
 }
 
 pub fn cpu_usage_info() -> f32 {
@@ -246,7 +289,9 @@ pub fn cpu_usage_info() -> f32 {
         .expect("cpu usage not a number");
     // let cpu_use = &cpu_use.replace("\n", "");
     let cpu_avg = (cpu_use / cores as f32).round();
-    return cpu_avg;
+
+
+    cpu_avg
 }
 pub fn battery_percentage() -> Option<(String, String)> {
     let battery_out = Command::new("sh")
@@ -310,7 +355,7 @@ fn device_model() -> Option<String> {
 }
 fn packages(which: &str) -> Option<String> {
     let mut how_many = String::new();
-    if which == "option1" {
+    if which == "package-managers" {
     // Do packages fully later
     // Package managers
     /* Todo List: // append all that exist to string and print string
@@ -403,7 +448,7 @@ fn packages(which: &str) -> Option<String> {
             }
         }
 
-    } else if which == "option2" {
+    } else if which == "path" {
 
         // Checks packages in all directories in $PATH
         let path = env::var("PATH").expect("$PATH is not set");
