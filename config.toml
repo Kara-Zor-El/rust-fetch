@@ -1,6 +1,7 @@
 # package options are "package-manager" or "path"
 packages = "package-managers"
 info_color = "magenta"
+os = "arch"
 
 # Colors - 
 # black

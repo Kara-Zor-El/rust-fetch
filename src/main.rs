@@ -9,7 +9,7 @@ use std::str;
 use std::process::Command;
 use std::fs::File;
 use std::fs;
-use std::io::Read;
+use std::io::{Read, Error, BufRead, BufReader};
 use titlecase::titlecase;
 use uname::uname;
 use std::env;
@@ -18,11 +18,13 @@ use sys_info::{mem_info, cpu_num};
 use directories::ProjectDirs;
 use serde::Deserialize;
 use colored::Colorize;
+use std::path::Path;
 
 #[derive(Deserialize)]
 struct Config {
     packages: String,
     info_color: String,
+    os: String,
 }
 
 fn main() {
@@ -79,10 +81,15 @@ fn main() {
             Err(_) => Config {
                 packages: "path".to_string(),
                 info_color: "blue".to_string(),
+                os: "arch".to_string(),
             },
         };
 
-        println!("{} {} {}", user_name.color(config.info_color.clone()), "@".blue().bold(), host_name.color(config.info_color.clone()));
+
+        println!("{} {} {}",
+                 user_name.color(config.info_color.clone()),
+                 "@".blue().bold(),
+                 host_name.color(config.info_color.clone()));
 
         println!("{:—<1$}", "", title_length);
 
