@@ -25,11 +25,11 @@
 - Memory usage
 - Battery (if on computer thas has one)
 - Users
-- Local & Public IP (must be manually enabled)
+- Local
 ### 🚧 Todo Features:
 - [ ] Disk
 - [ ] Song
-- [ ] Add Colors
+- [X] Add Colors
 - [ ] Allow customization
 - [ ] Publish to cargo crates
 - [ ] Publish to AUR
