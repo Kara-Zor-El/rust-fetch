@@ -24,6 +24,7 @@ use std::path::Path;
 struct Config {
     packages: String,
     info_color: String,
+    logo_color: String,
     os: String,
 }
 
@@ -32,6 +33,11 @@ fn main() {
     let host_name = whoami::devicename(); // hostname
     let title_length = host_name.chars().count() + user_name.chars().count() + 3; //length of hostname and username + @ symbol
     let os = whoami::distro(); // distro (and version if not rolling release)
+
+    let path = Path::new("src/ascii_art/arch");
+    let file = File::open(path).expect("File not found or cannot be opened");
+    let content = BufReader::new(&file);
+    let lines = content.lines();
 
     let kernel = uname().unwrap().release; // kernel
 
@@ -81,111 +87,157 @@ fn main() {
             Err(_) => Config {
                 packages: "path".to_string(),
                 info_color: "blue".to_string(),
+                logo_color: "magenta".to_string(),
                 os: "arch".to_string(),
             },
         };
 
+        let modules:[String;18] = [
+            format!("{} {} {}",
+                    user_name.color(config.info_color.clone()),
+                    "@".blue().bold(),
+                    host_name.color(config.info_color.clone())),
+            format!("{:—<1$}", "", title_length),
 
-        println!("{} {} {}",
-                 user_name.color(config.info_color.clone()),
-                 "@".blue().bold(),
-                 host_name.color(config.info_color.clone()));
 
-        println!("{:—<1$}", "", title_length);
 
-        println!("{} {}",
-                 "OS:".color(config.info_color.clone()).bold(),
-                 os.normal());
+            format!("{} {}",
+                     "OS:".color(config.info_color.clone()).bold(),
+                     os.normal()),
 
-        if let Some(model) = device_model() {
-            if model != "" {
-                println!("{} {}",
-                         "Model:".color(config.info_color.clone()).bold(),
-                         model.normal());
-            }
-        }
-
-        println!("{} {}",
-                 "Kernel:".color(config.info_color.clone()).bold(),
-                 kernel.normal());
-
-        println!("{} {}",
-                 "Uptime:".color(config.info_color.clone()).bold(),
-                 uptime_time().normal());
-        if let Some(how_many) = packages(&config.packages) {
-
-            if how_many != "" {
-                println!("{} {}",
-                         "Packages:".color(config.info_color.clone()).bold(),
-                         how_many.normal());
-            }
-        }
-        if usr_shell != "" {
-            println!("{} {}",
-                     "Defualt Shell:".color(config.info_color.clone()).bold(),
-                     usr_shell.normal());
-        }
-        println!("{} {}",
-                 "Screen Resolution:".color(config.info_color.clone()).bold(),
-                 res_info.normal());
-        println!("{} {}",
-                 "DE/WM:".color(config.info_color.clone()).bold(),
-                 de.normal());
-        println!("{} {}",
-                 "GTK Theme:".color(config.info_color.clone()).bold(),
-                 gtk_theme_find().normal());
-        println!("{} {}",
-                 "GTK Icon Theme:".color(config.info_color.clone()).bold(),
-                 gtk_icon_find().normal());
-        println!("{} {}",
-                 "Terminal:".color(config.info_color.clone()).bold(),
-                 terminal.normal());
-        println!("{} {} {}{}{}",
-                 "CPU:".color(config.info_color.clone()).bold(),
-                 cpu_info.normal(),
-                 "(".normal(),
-                 cpu_usage_info(),
-                 "%)");
-
-        if gpu_find().contains(", ") {
-            println!("{} {}",
-                     "GPUs:".color(config.info_color.clone()).bold(),
-                     gpu_find().normal());
-        } else {
-            println!("{} {}",
-                     "GPU: {}".color(config.info_color.clone()).bold(),
-                     gpu_find().normal());
-        }
-
-        println!("{} {}{}{}{}{:.2}{}",
-                 "Memory:".color(config.info_color.clone()).bold(),
-                 mem_used.to_string().normal(),
-                 "Mib / ",
-                 mem.total/1024,
-                 "Mib (",
-                 mem_percent,
-                 "%)");
-        if let Some((per, state)) = battery_percentage() {
-            if per != "" && state != "" {
-                println!("{} {} {}{}{}",
-                         "Battery:".color(config.info_color.clone()).bold(),
-                         per.normal(),
-                         "[",
-                         state,
-                         "]");
-            } else if per != "" {
-                println!("{} {}",
-                         "Battery:".color(config.info_color.clone()).bold(),
-                         per.normal());
+            if let Some(model) = device_model() {
+                if model != "" {
+                    format!("{} {}",
+                             "Model:".color(config.info_color.clone()).bold(),
+                             model.normal())
+                } else {
+                    format!("{} {}",
+                            "Model:".color(config.info_color.clone()).bold(),
+                            "Model not found".normal())
+                }
             } else {
+                format!("{} {}",
+                        "Model:".color(config.info_color.clone()).bold(),
+                        "Model not found".normal())
+            },
+
+            format!("{} {}",
+                     "Kernel:".color(config.info_color.clone()).bold(),
+                     kernel.normal()),
+
+            format!("{} {}",
+                     "Uptime:".color(config.info_color.clone()).bold(),
+                     uptime_time().normal()),
+            if let Some(how_many) = packages(&config.packages) {
+
+                if how_many != "" {
+                    format!("{} {}",
+                             "Packages:".color(config.info_color.clone()).bold(),
+                             how_many.normal())
+                } else {
+                    format!("{} {}",
+                            "Packages:".color(config.info_color.clone()).bold(),
+                            "packages not found".normal())
+                }
+            } else {
+                format!("{} {}",
+                            "Packages:".color(config.info_color.clone()).bold(),
+                            "packages not found".normal())
+            },
+
+            if usr_shell != "" {
+                format!("{} {}",
+                         "Defualt Shell:".color(config.info_color.clone()).bold(),
+                         usr_shell.normal())
+            } else {
+                format!("{} {}",
+                        "Default Shell:".color(config.info_color.clone()).bold(),
+                        "defualt shell not found".normal())
+            },
+            format!("{} {}",
+                     "Screen Resolution:".color(config.info_color.clone()).bold(),
+                     res_info.normal()),
+            format!("{} {}",
+                     "DE/WM:".color(config.info_color.clone()).bold(),
+                     de.normal()),
+            format!("{} {}",
+                     "GTK Theme:".color(config.info_color.clone()).bold(),
+                     gtk_theme_find().normal()),
+            format!("{} {}",
+                     "GTK Icon Theme:".color(config.info_color.clone()).bold(),
+                     gtk_icon_find().normal()),
+            format!("{} {}",
+                     "Terminal:".color(config.info_color.clone()).bold(),
+                     terminal.normal()),
+            format!("{} {} {}{}{}",
+                     "CPU:".color(config.info_color.clone()).bold(),
+                     cpu_info.normal(),
+                     "(".normal(),
+                     cpu_usage_info(),
+                     "%)"),
+
+            if gpu_find().contains(", ") {
+                format!("{} {}",
+                         "GPUs:".color(config.info_color.clone()).bold(),
+                         gpu_find().normal())
+            } else {
+                format!("{} {}",
+                         "GPU: {}".color(config.info_color.clone()).bold(),
+                         gpu_find().normal())
+            },
+
+            format!("{} {}{}{}{}{:.2}{}",
+                     "Memory:".color(config.info_color.clone()).bold(),
+                     mem_used.to_string().normal(),
+                     "Mib / ",
+                     mem.total/1024,
+                     "Mib (",
+                     mem_percent,
+                     "%)"),
+            if let Some((per, state)) = battery_percentage() {
+                if per != "" && state != "" {
+                    format!("{} {} {}{}{}",
+                             "Battery:".color(config.info_color.clone()).bold(),
+                             per.normal(),
+                             "[",
+                             state,
+                             "]")
+                } else if per != "" {
+                    format!("{} {}",
+                             "Battery:".color(config.info_color.clone()).bold(),
+                             per.normal())
+                } else {
+                    format!("{} {}",
+                            "Battery:".color(config.info_color.clone()).bold(),
+                            "battery info not found".normal())
+                }
+            } else {
+               format!("{} {}",
+                       "Battery:".color(config.info_color.clone()).bold(),
+                        "battery info not found".normal())
+            },
+
+            if let Some(users) = user_list() {
+                if users != "" {
+                    format!("{} {}",
+                             "Users:".color(config.info_color.clone()).bold(),
+                             users.normal())
+                } else {
+                    format!("{} {}",
+                            "Users:".color(config.info_color.clone()).bold(),
+                            "users not found".normal())
+                }
+            } else {
+                format!("{} {}",
+                        "Users:".color(config.info_color.clone()).bold(),
+                        "users not found".normal())
             }
-        }
-        if let Some(users) = user_list() {
-            if users != "" {
-                println!("{} {}",
-                         "users:".color(config.info_color.clone()).bold(),
-                         users.normal());
-            }
+        ];
+
+        for (x, line) in modules.into_iter().zip(lines) {
+            println!("{}{}",
+                     line.expect("failed to fetch ASCII art").color(config.logo_color.clone()).bold(),
+                     x);
         }
     }
     // let (local_ip, public_ip) = ip();
