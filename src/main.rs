@@ -2,9 +2,9 @@
 /*
 use std::path::Path;
 use walkdir::WalkDir;
-use local_ip_address::local_ip;
 use my_public_ip::resolve;
 */ // unused crates
+use local_ip_address::local_ip;
 use std::str;
 use std::process::Command;
 use std::fs::File;
@@ -34,10 +34,6 @@ fn main() {
     let title_length = host_name.chars().count() + user_name.chars().count() + 3; //length of hostname and username + @ symbol
     let os = whoami::distro(); // distro (and version if not rolling release)
 
-    let path = Path::new("src/ascii_art/arch");
-    let file = File::open(path).expect("File not found or cannot be opened");
-    let content = BufReader::new(&file);
-    let lines = content.lines();
 
     let kernel = uname().unwrap().release; // kernel
 
@@ -62,6 +58,7 @@ fn main() {
     // Checks CPU name and cores
     let cpu_info = GeneralReadout::new().cpu_model_name().unwrap();
 
+    let local_ip = ip();
     // Checks which GPUs you have
     //gpu_find();
 
@@ -72,6 +69,9 @@ fn main() {
 
     // Checks Screen Resolution info
     let res_info = GeneralReadout::new().resolution().unwrap();
+
+    let ascii = String::new();
+    //let path = Path::new("src/ascii_art/arch");
 
     // print outs
     // println!("{}", title_length); // prints length of title
@@ -91,8 +91,7 @@ fn main() {
                 os: "arch".to_string(),
             },
         };
-
-        let modules:[String;18] = [
+        let modules:[String;19] = [
             format!("{} {} {}",
                     user_name.color(config.info_color.clone()),
                     "@".blue().bold(),
@@ -231,17 +230,25 @@ fn main() {
                 format!("{} {}",
                         "Users:".color(config.info_color.clone()).bold(),
                         "users not found".normal())
-            }
-        ];
+            },
 
+            format!("{} {} {}",
+                    "IP:".color(config.info_color.clone()).bold(),
+                    local_ip.normal(),
+                    "[Local]".normal())
+
+        ];
+        let ascii = Path::new("/home/kara/.config/rust-fetch/ascii_art/arch");
+        let file = File::open(ascii).expect("File not found or cannot be opened");
+        let content = BufReader::new(&file);
+        let lines = content.lines();
         for (x, line) in modules.into_iter().zip(lines) {
             println!("{}{}",
                      line.expect("failed to fetch ASCII art").color(config.logo_color.clone()).bold(),
                      x);
         }
+
     }
-    // let (local_ip, public_ip) = ip();
-    // println!("IP: {} [Local], {} [Public]", local_ip, public_ip);
 }
 
 pub fn uptime_time() -> String {
@@ -535,12 +542,12 @@ fn packages(which: &str) -> Option<String> {
     Some(how_many.to_string())
 }
 
-// pub fn ip() -> (String, String){
-//    let my_local_ip = local_ip().unwrap().to_string();
-//    let my_public_ip = my_public_ip::resolve().unwrap().to_string();
-//
-//    return (my_local_ip, my_public_ip);
-//}
+pub fn ip() -> String {
+   let my_local_ip = local_ip().unwrap().to_string();
+   //let my_public_ip = my_public_ip::resolve().unwrap().to_string();
+
+   return my_local_ip;
+}
 
 /* Todo:
 [ X ] OS
