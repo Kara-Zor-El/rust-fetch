@@ -38,14 +38,6 @@ fn main() {
     // User Shell
     let usr_shell = env::var("SHELL").expect("$SHELL is not set");
 
-    // Checks users desktop Env
-    let de = env::var("XDG_CURRENT_DESKTOP")
-        .expect("$XDG_CURRENT_DESKTOP is not set"); /* +
-        " " +
-        &env::var("DESKTOP_SESSION")
-        .expect("$DESKTOP_SESSION is not set"); */
-    //de = titlecase(&de);
-
     // Checks current terminal
     use libmacchina::traits::GeneralReadout as _;
     let mut terminal = titlecase(&GeneralReadout::new().terminal().unwrap());
