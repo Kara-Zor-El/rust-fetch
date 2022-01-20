@@ -70,9 +70,6 @@ fn main() {
     // Checks Screen Resolution info
     let res_info = GeneralReadout::new().resolution().unwrap();
 
-    let ascii = String::new();
-    //let path = Path::new("src/ascii_art/arch");
-
     // print outs
     // println!("{}", title_length); // prints length of title
     if let Some(proj_dirs) = ProjectDirs::from("dev", "Kara-Wilson", "rust-fetch") {
@@ -91,7 +88,7 @@ fn main() {
                 os: "arch".to_string(),
             },
         };
-        let modules:[String;19] = [
+        let modules:[String;20] = [
             format!("{} {} {}",
                     user_name.color(config.info_color.clone()),
                     "@".blue().bold(),
@@ -235,10 +232,14 @@ fn main() {
             format!("{} {} {}",
                     "IP:".color(config.info_color.clone()).bold(),
                     local_ip.normal(),
-                    "[Local]".normal())
+                    "[Local]".normal()),
+
+            format!("")
 
         ];
-        let ascii = Path::new("/home/kara/.config/rust-fetch/ascii_art/arch");
+        let ascii = "/home/".to_owned() + &whoami::username() + "/.config/rust-fetch/ascii_art/" + &config.os;
+        // println!("{}", home);
+        //let ascii = Path::new("/home/kara/.config/rust-fetch/ascii_art/arch");
         let file = File::open(ascii).expect("File not found or cannot be opened");
         let content = BufReader::new(&file);
         let lines = content.lines();
@@ -247,7 +248,6 @@ fn main() {
                      line.expect("failed to fetch ASCII art").color(config.logo_color.clone()).bold(),
                      x);
         }
-
     }
 }
 
@@ -540,6 +540,13 @@ fn packages(which: &str) -> Option<String> {
         how_many = (&how_many[0..how_many.len() - 2]).to_string();
     }
     Some(how_many.to_string())
+}
+
+pub fn wm_de() -> String {
+    use libmacchina::traits::GeneralReadout as _;
+    let general_readout = GeneralReadout::new();
+    let resolution = general_readout.desktop_environment().expect("Failed to get desktop environment");
+    resolution
 }
 
 pub fn ip() -> String {
