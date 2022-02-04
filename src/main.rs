@@ -17,8 +17,11 @@ use libmacchina::GeneralReadout;
 use sys_info::{mem_info, cpu_num};
 use directories::ProjectDirs;
 use serde::Deserialize;
-use colored::Colorize;
+use colored::{Colorize, Color};
+use std::str::FromStr;
 use std::path::Path;
+use std::io::Write;
+
 
 #[derive(Deserialize)]
 struct Config {
@@ -26,6 +29,57 @@ struct Config {
     info_color: String,
     logo_color: String,
     os: String,
+}
+
+pub struct ColorCodeIter<I: Iterator<Item = char>> {
+    iter: I,
+    color: Color,
+    remainder: Option<char>,
+    buffer: String,
+}
+
+impl<I: Iterator<Item = char>> ColorCodeIter<I> {
+    pub fn new(iter: I) -> Self
+    {
+        Self { iter, color: Color::Blue /* or something like that */, remainder: None, buffer: String::with_capacity(4) }
+    }
+}
+
+impl<I: Iterator<Item = char>> Iterator for ColorCodeIter<I> {
+    type Item = (char, Color);
+
+    fn next(&mut self) -> Option<(char, Color)> {
+        if let Some(r) = self.remainder {
+            self.remainder = None;
+            return Some((r, self.color));
+        }
+
+        match self.iter.next() {
+            Some('$') => match self.iter.next() {
+                Some('{') => loop {
+                    match self.iter.next() {
+                        Some('}') => {
+                            if let Ok(color) = Color::from_str(self.buffer.as_str()) {
+                                self.color = color;
+                            }
+                            self.buffer.clear();
+
+                            break Some((self.iter.next()?, self.color));
+                        },
+                        Some(v) => self.buffer.push(v),
+                        None => (),
+                    }
+                },
+                Some(v) => {
+                    self.remainder = Some(v);
+                    Some(('$', self.color))
+                },
+                None => None,
+            },
+            Some('\\') => Some((self.iter.next()?, self.color)),
+            v => Some((v?, self.color)),
+        }
+    }
 }
 
 fn main() {
@@ -240,13 +294,24 @@ fn main() {
         let ascii = "/home/".to_owned() + &whoami::username() + "/.config/rust-fetch/ascii_art/" + &config.os;
         // println!("{}", home);
         //let ascii = Path::new("/home/kara/.config/rust-fetch/ascii_art/arch");
-        let file = File::open(ascii).expect("File not found or cannot be opened");
-        let content = BufReader::new(&file);
-        let lines = content.lines();
-        for (x, line) in modules.into_iter().zip(lines) {
+        //let file = File::open(ascii).expect("File not found or cannot be opened");
+        //let content = BufReader::new(&file);
+        /* for (x, line) in modules.into_iter().zip(lines) {
             println!("{}{}",
                      line.expect("failed to fetch ASCII art").color(config.logo_color.clone()).bold(),
                      x);
+        } */
+        let buf = std::fs::read_to_string(ascii).unwrap();
+        let mut i = 0;
+        for (character, color) in ColorCodeIter::new(buf.chars()) {
+            if character != '\n' {
+                print!("{}", character.to_string().color(color));
+            } else {
+                println!("{} ", modules[i]);
+                i+=1;
+                //print!("{}", character.to_string().color(color));
+            }
+                     //std::io::stdout().flush();
         }
     }
 }
