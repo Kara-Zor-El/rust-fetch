@@ -2,9 +2,9 @@
 /*
 use std::path::Path;
 use walkdir::WalkDir;
-use local_ip_address::local_ip;
 use my_public_ip::resolve;
 */ // unused crates
+use local_ip_address::local_ip;
 use std::str;
 use std::process::Command;
 use std::fs::File;
@@ -17,14 +17,69 @@ use libmacchina::GeneralReadout;
 use sys_info::{mem_info, cpu_num};
 use directories::ProjectDirs;
 use serde::Deserialize;
-use colored::Colorize;
+use colored::{Colorize, Color};
+use std::str::FromStr;
 use std::path::Path;
+use std::io::Write;
+
 
 #[derive(Deserialize)]
 struct Config {
     packages: String,
     info_color: String,
+    logo_color: String,
     os: String,
+}
+
+pub struct ColorCodeIter<I: Iterator<Item = char>> {
+    iter: I,
+    color: Color,
+    remainder: Option<char>,
+    buffer: String,
+}
+
+impl<I: Iterator<Item = char>> ColorCodeIter<I> {
+    pub fn new(iter: I) -> Self
+    {
+        Self { iter, color: Color::Blue /* or something like that */, remainder: None, buffer: String::with_capacity(4) }
+    }
+}
+
+impl<I: Iterator<Item = char>> Iterator for ColorCodeIter<I> {
+    type Item = (char, Color);
+
+    fn next(&mut self) -> Option<(char, Color)> {
+        if let Some(r) = self.remainder {
+            self.remainder = None;
+            return Some((r, self.color));
+        }
+
+        match self.iter.next() {
+            Some('$') => match self.iter.next() {
+                Some('{') => loop {
+                    match self.iter.next() {
+                        Some('}') => {
+                            if let Ok(color) = Color::from_str(self.buffer.as_str()) {
+                                self.color = color;
+                            }
+                            self.buffer.clear();
+
+                            break Some((self.iter.next()?, self.color));
+                        },
+                        Some(v) => self.buffer.push(v),
+                        None => (),
+                    }
+                },
+                Some(v) => {
+                    self.remainder = Some(v);
+                    Some(('$', self.color))
+                },
+                None => None,
+            },
+            Some('\\') => Some((self.iter.next()?, self.color)),
+            v => Some((v?, self.color)),
+        }
+    }
 }
 
 fn main() {
@@ -32,6 +87,7 @@ fn main() {
     let host_name = whoami::devicename(); // hostname
     let title_length = host_name.chars().count() + user_name.chars().count() + 3; //length of hostname and username + @ symbol
     let os = whoami::distro(); // distro (and version if not rolling release)
+
 
     let kernel = uname().unwrap().release; // kernel
 
@@ -48,6 +104,7 @@ fn main() {
     // Checks CPU name and cores
     let cpu_info = GeneralReadout::new().cpu_model_name().unwrap();
 
+    let local_ip = ip();
     // Checks which GPUs you have
     //gpu_find();
 
@@ -73,115 +130,182 @@ fn main() {
             Err(_) => Config {
                 packages: "path".to_string(),
                 info_color: "blue".to_string(),
+                logo_color: "magenta".to_string(),
                 os: "arch".to_string(),
             },
         };
+        let modules:[String;20] = [
+            format!("{} {} {}",
+                    user_name.color(config.info_color.clone()),
+                    "@".blue().bold(),
+                    host_name.color(config.info_color.clone())),
+            format!("{:—<1$}", "", title_length),
 
 
-        println!("{} {} {}",
-                 user_name.color(config.info_color.clone()),
-                 "@".blue().bold(),
-                 host_name.color(config.info_color.clone()));
 
-        println!("{:—<1$}", "", title_length);
+            format!("{} {}",
+                     "OS:".color(config.info_color.clone()).bold(),
+                     os.normal()),
 
-        println!("{} {}",
-                 "OS:".color(config.info_color.clone()).bold(),
-                 os.normal());
-
-        if let Some(model) = device_model() {
-            if model != "" {
-                println!("{} {}",
-                         "Model:".color(config.info_color.clone()).bold(),
-                         model.normal());
-            }
-        }
-
-        println!("{} {}",
-                 "Kernel:".color(config.info_color.clone()).bold(),
-                 kernel.normal());
-
-        println!("{} {}",
-                 "Uptime:".color(config.info_color.clone()).bold(),
-                 uptime_time().normal());
-        if let Some(how_many) = packages(&config.packages) {
-
-            if how_many != "" {
-                println!("{} {}",
-                         "Packages:".color(config.info_color.clone()).bold(),
-                         how_many.normal());
-            }
-        }
-        if usr_shell != "" {
-            println!("{} {}",
-                     "Defualt Shell:".color(config.info_color.clone()).bold(),
-                     usr_shell.normal());
-        }
-        println!("{} {}",
-                 "Screen Resolution:".color(config.info_color.clone()).bold(),
-                 res_info.normal());
-        println!("{} {}",
-                 "DE/WM:".color(config.info_color.clone()).bold(),
-                 de.normal());
-        println!("{} {}",
-                 "GTK Theme:".color(config.info_color.clone()).bold(),
-                 gtk_theme_find().normal());
-        println!("{} {}",
-                 "GTK Icon Theme:".color(config.info_color.clone()).bold(),
-                 gtk_icon_find().normal());
-        println!("{} {}",
-                 "Terminal:".color(config.info_color.clone()).bold(),
-                 terminal.normal());
-        println!("{} {} {}{}{}",
-                 "CPU:".color(config.info_color.clone()).bold(),
-                 cpu_info.normal(),
-                 "(".normal(),
-                 cpu_usage_info(),
-                 "%)");
-
-        if gpu_find().contains(", ") {
-            println!("{} {}",
-                     "GPUs:".color(config.info_color.clone()).bold(),
-                     gpu_find().normal());
-        } else {
-            println!("{} {}",
-                     "GPU: {}".color(config.info_color.clone()).bold(),
-                     gpu_find().normal());
-        }
-
-        println!("{} {}{}{}{}{:.2}{}",
-                 "Memory:".color(config.info_color.clone()).bold(),
-                 mem_used.to_string().normal(),
-                 "Mib / ",
-                 mem.total/1024,
-                 "Mib (",
-                 mem_percent,
-                 "%)");
-        if let Some((per, state)) = battery_percentage() {
-            if per != "" && state != "" {
-                println!("{} {} {}{}{}",
-                         "Battery:".color(config.info_color.clone()).bold(),
-                         per.normal(),
-                         "[",
-                         state,
-                         "]");
-            } else if per != "" {
-                println!("{} {}",
-                         "Battery:".color(config.info_color.clone()).bold(),
-                         per.normal());
+            if let Some(model) = device_model() {
+                if model != "" {
+                    format!("{} {}",
+                             "Model:".color(config.info_color.clone()).bold(),
+                             model.normal())
+                } else {
+                    format!("{} {}",
+                            "Model:".color(config.info_color.clone()).bold(),
+                            "Model not found".normal())
+                }
             } else {
+                format!("{} {}",
+                        "Model:".color(config.info_color.clone()).bold(),
+                        "Model not found".normal())
+            },
+
+            format!("{} {}",
+                     "Kernel:".color(config.info_color.clone()).bold(),
+                     kernel.normal()),
+
+            format!("{} {}",
+                     "Uptime:".color(config.info_color.clone()).bold(),
+                     uptime_time().normal()),
+            if let Some(how_many) = packages(&config.packages) {
+
+                if how_many != "" {
+                    format!("{} {}",
+                             "Packages:".color(config.info_color.clone()).bold(),
+                             how_many.normal())
+                } else {
+                    format!("{} {}",
+                            "Packages:".color(config.info_color.clone()).bold(),
+                            "packages not found".normal())
+                }
+            } else {
+                format!("{} {}",
+                            "Packages:".color(config.info_color.clone()).bold(),
+                            "packages not found".normal())
+            },
+
+            if usr_shell != "" {
+                format!("{} {}",
+                         "Defualt Shell:".color(config.info_color.clone()).bold(),
+                         usr_shell.normal())
+            } else {
+                format!("{} {}",
+                        "Default Shell:".color(config.info_color.clone()).bold(),
+                        "defualt shell not found".normal())
+            },
+            format!("{} {}",
+                     "Screen Resolution:".color(config.info_color.clone()).bold(),
+                     res_info.normal()),
+            format!("{} {}",
+                     "DE/WM:".color(config.info_color.clone()).bold(),
+                     de.normal()),
+            format!("{} {}",
+                     "GTK Theme:".color(config.info_color.clone()).bold(),
+                     gtk_theme_find().normal()),
+            format!("{} {}",
+                     "GTK Icon Theme:".color(config.info_color.clone()).bold(),
+                     gtk_icon_find().normal()),
+            format!("{} {}",
+                     "Terminal:".color(config.info_color.clone()).bold(),
+                     terminal.normal()),
+            format!("{} {} {}{}{}",
+                     "CPU:".color(config.info_color.clone()).bold(),
+                     cpu_info.normal(),
+                     "(".normal(),
+                     cpu_usage_info(),
+                     "%)"),
+
+            if gpu_find().contains(", ") {
+                format!("{} {}",
+                         "GPUs:".color(config.info_color.clone()).bold(),
+                         gpu_find().normal())
+            } else {
+                format!("{} {}",
+                         "GPU: {}".color(config.info_color.clone()).bold(),
+                         gpu_find().normal())
+            },
+
+            format!("{} {}{}{}{}{:.2}{}",
+                     "Memory:".color(config.info_color.clone()).bold(),
+                     mem_used.to_string().normal(),
+                     "Mib / ",
+                     mem.total/1024,
+                     "Mib (",
+                     mem_percent,
+                     "%)"),
+            if let Some((per, state)) = battery_percentage() {
+                if per != "" && state != "" {
+                    format!("{} {} {}{}{}",
+                             "Battery:".color(config.info_color.clone()).bold(),
+                             per.normal(),
+                             "[",
+                             state,
+                             "]")
+                } else if per != "" {
+                    format!("{} {}",
+                             "Battery:".color(config.info_color.clone()).bold(),
+                             per.normal())
+                } else {
+                    format!("{} {}",
+                            "Battery:".color(config.info_color.clone()).bold(),
+                            "battery info not found".normal())
+                }
+            } else {
+               format!("{} {}",
+                       "Battery:".color(config.info_color.clone()).bold(),
+                        "battery info not found".normal())
+            },
+
+            if let Some(users) = user_list() {
+                if users != "" {
+                    format!("{} {}",
+                             "Users:".color(config.info_color.clone()).bold(),
+                             users.normal())
+                } else {
+                    format!("{} {}",
+                            "Users:".color(config.info_color.clone()).bold(),
+                            "users not found".normal())
+                }
+            } else {
+                format!("{} {}",
+                        "Users:".color(config.info_color.clone()).bold(),
+                        "users not found".normal())
+            },
+
+            format!("{} {} {}",
+                    "IP:".color(config.info_color.clone()).bold(),
+                    local_ip.normal(),
+                    "[Local]".normal()),
+
+            format!("")
+
+        ];
+        let ascii = "/home/".to_owned() + &whoami::username() + "/.config/rust-fetch/ascii_art/" + &config.os;
+        // println!("{}", home);
+        //let ascii = Path::new("/home/kara/.config/rust-fetch/ascii_art/arch");
+        //let file = File::open(ascii).expect("File not found or cannot be opened");
+        //let content = BufReader::new(&file);
+        /* for (x, line) in modules.into_iter().zip(lines) {
+            println!("{}{}",
+                     line.expect("failed to fetch ASCII art").color(config.logo_color.clone()).bold(),
+                     x);
+        } */
+        let buf = std::fs::read_to_string(ascii).unwrap();
+        let mut i = 0;
+        for (character, color) in ColorCodeIter::new(buf.chars()) {
+            if character != '\n' {
+                print!("{}", character.to_string().color(color));
+            } else {
+                println!("{} ", modules[i]);
+                i+=1;
+                //print!("{}", character.to_string().color(color));
             }
-        }
-        if let Some(users) = user_list() {
-            if users != "" {
-                println!("{} {}",
-                         "users:".color(config.info_color.clone()).bold(),
-                         users.normal());
-            }
+                     //std::io::stdout().flush();
         }
     }
-    // let (local_ip, public_ip) = ip();
-    // println!("IP: {} [Local], {} [Public]", local_ip, public_ip);
 }
 
 pub fn uptime_time() -> String {
@@ -475,12 +599,19 @@ fn packages(which: &str) -> Option<String> {
     Some(how_many.to_string())
 }
 
-// pub fn ip() -> (String, String){
-//    let my_local_ip = local_ip().unwrap().to_string();
-//    let my_public_ip = my_public_ip::resolve().unwrap().to_string();
-//
-//    return (my_local_ip, my_public_ip);
-//}
+pub fn wm_de() -> String {
+    use libmacchina::traits::GeneralReadout as _;
+    let general_readout = GeneralReadout::new();
+    let resolution = general_readout.desktop_environment().expect("Failed to get desktop environment");
+    resolution
+}
+
+pub fn ip() -> String {
+   let my_local_ip = local_ip().unwrap().to_string();
+   //let my_public_ip = my_public_ip::resolve().unwrap().to_string();
+
+   return my_local_ip;
+}
 
 /* Todo:
 [ X ] OS
