@@ -201,7 +201,7 @@ fn main() {
                      res_info.normal()),
             format!("{} {}",
                      "DE/WM:".color(config.info_color.clone()).bold(),
-                     de.normal()),
+                     wm_de().normal()),
             format!("{} {}",
                      "GTK Theme:".color(config.info_color.clone()).bold(),
                      gtk_theme_find().normal()),
