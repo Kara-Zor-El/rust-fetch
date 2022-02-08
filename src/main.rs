@@ -3,13 +3,14 @@
 use std::path::Path;
 use walkdir::WalkDir;
 use my_public_ip::resolve;
+use std::path::Path;
 */ // unused crates
 use local_ip_address::local_ip;
 use std::str;
 use std::process::Command;
 use std::fs::File;
 use std::fs;
-use std::io::{Read, Error, BufRead, BufReader};
+use std::io::Read;
 use titlecase::titlecase;
 use uname::uname;
 use std::env;
@@ -19,15 +20,14 @@ use directories::ProjectDirs;
 use serde::Deserialize;
 use colored::{Colorize, Color};
 use std::str::FromStr;
-use std::path::Path;
-use std::io::Write;
+//use std::io::Write;
 
 
 #[derive(Deserialize)]
 struct Config {
     packages: String,
     info_color: String,
-    logo_color: String,
+    //logo_color: String,
     os: String,
 }
 
@@ -130,7 +130,7 @@ fn main() {
             Err(_) => Config {
                 packages: "path".to_string(),
                 info_color: "blue".to_string(),
-                logo_color: "magenta".to_string(),
+                //logo_color: "magenta".to_string(),
                 os: "arch".to_string(),
             },
         };
