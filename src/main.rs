@@ -561,9 +561,10 @@ fn packages(which: &str) -> Option<String> {
         }
 
         if flatpak_e == true { // I think i used the wrong flatpak directories. should investagate when on wifi
-            let flatpak_dir_system: String = "/var/lib/flatpak".to_string();
-            let flatpak_dir_user: String = "/home/".to_string() + &whoami::username().to_string() + "/.local/share/flatpak";
-            let flatpak = fs::read_dir(flatpak_dir_system).unwrap().count() + fs::read_dir(flatpak_dir_user).unwrap().count();
+            let flatpak_dir_system: String = "/var/lib/flatpak/app".to_string();
+            //let flatpak_dir_user: String = "/home/".to_string() + &whoami::username().to_string() + "/.local/share/flatpak";
+            //let flatpak = fs::read_dir(flatpak_dir_system).unwrap().count() + fs::read_dir(flatpak_dir_user).unwrap().count();
+            let flatpak = fs::read_dir(flatpak_dir_system).unwrap().count();
             if flatpak.to_string() != "" {
                 how_many += ", Flatpak (";
                 how_many += flatpak.to_string().as_str();
