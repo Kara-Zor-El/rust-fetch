@@ -494,7 +494,7 @@ fn packages(which: &str) -> Option<String> {
         // check if apt exists
         let apt_e = std::path::Path::new("/bin/apt").exists() | std::path::Path::new("/usr/bin/apt").exists();
         // check if pip exists
-        let pip_e = std::path::Path::new("/bin/pip").exists() | std::path::Path::new("/usr/bin/pip").exists() | std::path::Path::new("/bin/pip3").exists() | std::path::Path::new("/usr/bin/pip3").exists();
+        // let pip_e = std::path::Path::new("/bin/pip").exists() | std::path::Path::new("/usr/bin/pip").exists();
         // check if cargo exists
         let cargo_e = std::path::Path::new("/bin/cargo").exists() | std::path::Path::new("/usr/bin/cargo").exists();
         // check if flatpak exists
@@ -540,7 +540,7 @@ fn packages(which: &str) -> Option<String> {
                 how_many += ")";
             }
         }
-        if pip_e == true {
+        /* if pip_e == true {
             let pip = Command::new("sh")
                 .arg("-c")
                 .arg("pip list | wc -l")
@@ -558,12 +558,10 @@ fn packages(which: &str) -> Option<String> {
                 how_many += pip_out.to_string().as_str();
                 how_many += ")";
             }
-        }
+        }*/
 
         if flatpak_e == true { // I think i used the wrong flatpak directories. should investagate when on wifi
             let flatpak_dir_system: String = "/var/lib/flatpak/app".to_string();
-            //let flatpak_dir_user: String = "/home/".to_string() + &whoami::username().to_string() + "/.local/share/flatpak";
-            //let flatpak = fs::read_dir(flatpak_dir_system).unwrap().count() + fs::read_dir(flatpak_dir_user).unwrap().count();
             let flatpak = fs::read_dir(flatpak_dir_system).unwrap().count();
             if flatpak.to_string() != "" {
                 how_many += ", Flatpak (";
