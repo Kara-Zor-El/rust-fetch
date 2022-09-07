@@ -6,3 +6,5 @@ Logo-Image2.xcf
 Logo.xcf
 README.html
 build.rs
+Cargo.lock
+src/.main.rs.rustfmt
