@@ -20,15 +20,16 @@ use directories::ProjectDirs;
 use serde::Deserialize;
 use colored::{Colorize, Color};
 use std::str::FromStr;
+use whoami::*;
+use rustix::process::Uname;
+use std::time::SystemTime;
 //use std::io::Write;
 
 
 #[derive(Deserialize)]
-struct Config {
-    packages: String,
-    info_color: String,
-    //logo_color: String,
-    os: String,
+struct Style {
+    title: String,
+    text: String,
 }
 
 pub struct ColorCodeIter<I: Iterator<Item = char>> {
@@ -83,229 +84,100 @@ impl<I: Iterator<Item = char>> Iterator for ColorCodeIter<I> {
 }
 
 fn main() {
-    let user_name = titlecase(&whoami::username()); // username
-    let host_name = whoami::devicename(); // hostname
-    let title_length = host_name.chars().count() + user_name.chars().count() + 3; //length of hostname and username + @ symbol
-    let os = whoami::distro(); // distro (and version if not rolling release)
+    let username = get_user().unwrap();
+    let os = get_os().unwrap();
+    let host = get_host().unwrap();
+    let kernel = get_kernel().unwrap();
+    let model = get_model().unwrap();
+    println!("{}: {}", os.title, os.text);
+    println!("{}: {}", username.title, username.text);
+    println!("{}: {}", host.title, host.text);
+    println!("{}: {}", kernel.title, kernel.text);
+    println!("{}: {}", model.title, model.text);
+}
 
+fn get_os() -> Option<Style> {
+    let os = whoami::distro();
+    let style = Style {
+        title: "OS".to_string(),
+        text: os,
+    };
+    Some(style)
+}
 
-    let kernel = uname().unwrap().release; // kernel
+fn get_user() -> Option<Style> {
+    let user = username();
+    let style = Style {
+        title: "User".to_string(),
+        text: titlecase(&user),
+    };
+    Some(style)
+}
 
-    // User Shell
-    let usr_shell = env::var("SHELL").expect("$SHELL is not set");
+fn get_host() -> Option<Style> {
+    let host = hostname();
+    let style = Style {
+        title: "Host".to_string(),
+        text: titlecase(&host),
+    };
+    Some(style)
+}
 
-    // Checks current terminal
-    use libmacchina::traits::GeneralReadout as _;
-    let mut terminal = titlecase(&GeneralReadout::new().terminal().unwrap());
-    if terminal == "Kitty" {
-        terminal = terminal + " 🐱";
-    }
+fn get_model()-> Option<Style> {
+    let machine_kind = if cfg!(unix) {
+        "unix"
+    } else if cfg!(windows) {
+        "windows"
+    } else if cfg!(macos) {
+        "macos"
+    } else {
+        "unknown"
+    };
+    let model: String = match machine_kind {
+        "unix" => {
+            let product_name = fs::read_to_string("/sys/devices/virtual/dmi/id/product_name").unwrap().trim().to_string();
+            let product_version = fs::read_to_string("/sys/devices/virtual/dmi/id/product_version").unwrap().trim().to_string();
+            let model = format!("{} {}", product_name, product_version);
+            model
+        },
+        "windows" => {
+            let model = Command::new("wmic")
+                .args(&["computersystem", "get", "manufacturer,model"])
+                .output()
+                .expect("failed to execute process")
+                .stdout;
+            let model = String::from_utf8_lossy(&model);
+            let model = model.trim().to_string();
+            model
+        },
+        "macos" => {
+            let model = Command::new("sysctl")
+                .arg("-n hw.model")
+                .output()
+                .expect("failed to execute process")
+                .stdout;
+            let model = str::from_utf8(&model).unwrap().to_string();
+            model
+        },
+        _ => {
+            let model = "Unknown".to_string();
+            model
+        },
+    };
+    let style = Style {
+        title: "Model".to_string(),
+        text: model,
+    };
+    Some(style)
+}
 
-    // Checks CPU name and cores
-    let cpu_info = GeneralReadout::new().cpu_model_name().unwrap();
-
-    let local_ip = ip();
-    // Checks which GPUs you have
-    //gpu_find();
-
-    // Checks memory info
-    let mem = mem_info().unwrap();
-      let mem_used = mem.total/1024 - mem.avail/1024;
-      let mem_percent: f32  = ((mem_used as f32)/((mem.total as f32)/1024.0)*100.0) as f32;
-
-    // Checks Screen Resolution info
-    let res_info = GeneralReadout::new().resolution().unwrap();
-
-    // print outs
-    // println!("{}", title_length); // prints length of title
-    if let Some(proj_dirs) = ProjectDirs::from("dev", "Kara-Wilson", "rust-fetch") {
-        let config_dir = proj_dirs.config_dir();
-
-        let config_file = fs::read_to_string(
-            config_dir.join("config.toml"),
-        );
-
-        let config: Config = match config_file {
-            Ok(file) => toml::from_str(&file).unwrap(),
-            Err(_) => Config {
-                packages: "path".to_string(),
-                info_color: "blue".to_string(),
-                //logo_color: "magenta".to_string(),
-                os: "arch".to_string(),
-            },
-        };
-        let modules:[String;20] = [
-            format!("{} {} {}",
-                    user_name.color(config.info_color.clone()),
-                    "@".blue().bold(),
-                    host_name.color(config.info_color.clone())),
-            format!("{:—<1$}", "", title_length),
-
-
-
-            format!("{} {}",
-                     "OS:".color(config.info_color.clone()).bold(),
-                     os.normal()),
-
-            if let Some(model) = device_model() {
-                if model != "" {
-                    format!("{} {}",
-                             "Model:".color(config.info_color.clone()).bold(),
-                             model.normal())
-                } else {
-                    format!("{} {}",
-                            "Model:".color(config.info_color.clone()).bold(),
-                            "Model not found".normal())
-                }
-            } else {
-                format!("{} {}",
-                        "Model:".color(config.info_color.clone()).bold(),
-                        "Model not found".normal())
-            },
-
-            format!("{} {}",
-                     "Kernel:".color(config.info_color.clone()).bold(),
-                     kernel.normal()),
-
-            format!("{} {}",
-                     "Uptime:".color(config.info_color.clone()).bold(),
-                     uptime_time().normal()),
-            if let Some(how_many) = packages(&config.packages) {
-
-                if how_many != "" {
-                    format!("{} {}",
-                             "Packages:".color(config.info_color.clone()).bold(),
-                             how_many.normal())
-                } else {
-                    format!("{} {}",
-                            "Packages:".color(config.info_color.clone()).bold(),
-                            "packages not found".normal())
-                }
-            } else {
-                format!("{} {}",
-                            "Packages:".color(config.info_color.clone()).bold(),
-                            "packages not found".normal())
-            },
-
-            if usr_shell != "" {
-                format!("{} {}",
-                         "Defualt Shell:".color(config.info_color.clone()).bold(),
-                         usr_shell.normal())
-            } else {
-                format!("{} {}",
-                        "Default Shell:".color(config.info_color.clone()).bold(),
-                        "defualt shell not found".normal())
-            },
-            format!("{} {}",
-                     "Screen Resolution:".color(config.info_color.clone()).bold(),
-                     res_info.normal()),
-            format!("{} {}",
-                     "DE/WM:".color(config.info_color.clone()).bold(),
-                     wm_de().normal()),
-            format!("{} {}",
-                     "GTK Theme:".color(config.info_color.clone()).bold(),
-                     gtk_theme_find().normal()),
-            format!("{} {}",
-                     "GTK Icon Theme:".color(config.info_color.clone()).bold(),
-                     gtk_icon_find().normal()),
-            format!("{} {}",
-                     "Terminal:".color(config.info_color.clone()).bold(),
-                     terminal.normal()),
-            format!("{} {} {}{}{}",
-                     "CPU:".color(config.info_color.clone()).bold(),
-                     cpu_info.normal(),
-                     "(".normal(),
-                     cpu_usage_info(),
-                     "%)"),
-
-            if gpu_find().contains(", ") {
-                format!("{} {}",
-                         "GPUs:".color(config.info_color.clone()).bold(),
-                         gpu_find().normal())
-            } else {
-                format!("{} {}",
-                         "GPU: {}".color(config.info_color.clone()).bold(),
-                         gpu_find().normal())
-            },
-
-            format!("{} {}{}{}{}{:.2}{}",
-                     "Memory:".color(config.info_color.clone()).bold(),
-                     mem_used.to_string().normal(),
-                     "Mib / ",
-                     mem.total/1024,
-                     "Mib (",
-                     mem_percent,
-                     "%)"),
-            if let Some((per, state)) = battery_percentage() {
-                if per != "" && state != "" {
-                    format!("{} {} {}{}{}",
-                             "Battery:".color(config.info_color.clone()).bold(),
-                             per.normal(),
-                             "[",
-                             state,
-                             "]")
-                } else if per != "" {
-                    format!("{} {}",
-                             "Battery:".color(config.info_color.clone()).bold(),
-                             per.normal())
-                } else {
-                    format!("{} {}",
-                            "Battery:".color(config.info_color.clone()).bold(),
-                            "battery info not found".normal())
-                }
-            } else {
-               format!("{} {}",
-                       "Battery:".color(config.info_color.clone()).bold(),
-                        "battery info not found".normal())
-            },
-
-            if let Some(users) = user_list() {
-                if users != "" {
-                    format!("{} {}",
-                             "Users:".color(config.info_color.clone()).bold(),
-                             users.normal())
-                } else {
-                    format!("{} {}",
-                            "Users:".color(config.info_color.clone()).bold(),
-                            "users not found".normal())
-                }
-            } else {
-                format!("{} {}",
-                        "Users:".color(config.info_color.clone()).bold(),
-                        "users not found".normal())
-            },
-
-            format!("{} {} {}",
-                    "IP:".color(config.info_color.clone()).bold(),
-                    local_ip.normal(),
-                    "[Local]".normal()),
-
-            format!("")
-
-        ];
-        let ascii = "/home/".to_owned() + &whoami::username() + "/.config/rust-fetch/ascii_art/" + &config.os;
-        // println!("{}", home);
-        //let ascii = Path::new("/home/kara/.config/rust-fetch/ascii_art/arch");
-        //let file = File::open(ascii).expect("File not found or cannot be opened");
-        //let content = BufReader::new(&file);
-        /* for (x, line) in modules.into_iter().zip(lines) {
-            println!("{}{}",
-                     line.expect("failed to fetch ASCII art").color(config.logo_color.clone()).bold(),
-                     x);
-        } */
-        let buf = std::fs::read_to_string(ascii).unwrap();
-        let mut i = 0;
-        for (character, color) in ColorCodeIter::new(buf.chars()) {
-            if character != '\n' {
-                print!("{}", character.to_string().color(color));
-            } else {
-                println!("{} ", modules[i]);
-                i+=1;
-                //print!("{}", character.to_string().color(color));
-            }
-                     //std::io::stdout().flush();
-        }
-    }
+fn get_kernel() -> Option<Style> {
+    let kernel = uname().unwrap().release;
+    let style = Style {
+        title: "Kernel".to_string(),
+        text: kernel,
+    };
+    Some(style)
 }
 
 pub fn uptime_time() -> String {
